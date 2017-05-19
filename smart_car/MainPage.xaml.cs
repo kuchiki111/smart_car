@@ -63,16 +63,6 @@ namespace smart_car
 
         }
 
-
     }
 
-    class myGpioPin
-    {
-        public GpioPin pin5;
-        public GpioPin pin6;
-        public GpioPin pin23;
-        public GpioPin pin24;
-        public GpioPin pin17;
-        public GpioPin pin27;
-    }
 }
