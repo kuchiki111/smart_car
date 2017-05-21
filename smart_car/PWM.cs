@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,53 +14,80 @@ namespace smart_car
         public GpioPin channel;
         public double frequency;
         public double dc;
-        public Boolean run = true;
+
+        public double currentDirection;
+        public double pulseFrequency;
+
+        private Stopwatch stopwatch;
 
         public PWM(GpioPin channel, double frequency)
         {
-            this.channel = channel;
             this.frequency = frequency;
+            this.channel = channel;
         }
 
         public void start(double dc)
         {
             this.dc = dc;
-            run = true;
-            Windows.System.Threading.ThreadPool.RunAsync(PWMthread, Windows.System.Threading.WorkItemPriority.High);
-        }
-
-        private void PWMthread(IAsyncAction operation)
-        {
-            int hightime = Convert.ToInt32((1000 / frequency) * (dc / 100));
-            int lowtime = Convert.ToInt32((1000 / frequency) - hightime);
-
-            while (run)
-            {
-                channel.Write(GpioPinValue.High);
-                Task.Delay(hightime);
-                channel.Write(GpioPinValue.Low);
-                Task.Delay(lowtime);
-
-            }
+            setValue();
+            PWMStart();
         }
 
         public void ChangeFrequency(double frequency)
         {
             this.frequency = frequency;
-            start(dc);
+            setValue();
         }
 
         public void ChangeDutyCycle(double dc)
         {
             this.dc = dc;
-            start(dc);
+            setValue();
         }
 
-        public void stop()
+        public void PWMStart()
         {
-            run = false;
+            stopwatch = Stopwatch.StartNew();
+
+            Windows.System.Threading.ThreadPool.RunAsync(PWMthread,Windows.System.Threading.WorkItemPriority.High);
         }
 
+        private void PWMthread(IAsyncAction action)
+        {
+            while (true)
+            {
+                if (currentDirection != 0)
+                {
+                    channel.Write(GpioPinValue.High);
+                }
+                //Task.Delay(Convert.ToInt32(currentDirection));
+                wait(currentDirection);
+
+                channel.Write(GpioPinValue.Low);
+                //Task.Delay(Convert.ToInt32(pulseFrequency - currentDirection));
+                wait(pulseFrequency - currentDirection);
+            }
+        }
+
+        private void wait(double ms)
+        {
+            long initialTick = stopwatch.ElapsedTicks;
+            long initialElapsed = stopwatch.ElapsedMilliseconds;
+
+            double desiredTicks = ms / 1000 * Stopwatch.Frequency;
+            double finalTick = initialTick + desiredTicks;
+
+            while (stopwatch.ElapsedTicks < finalTick)
+            {
+
+            }
+        }
+
+        private void setValue()
+        {
+            pulseFrequency = (1000 * (1 / frequency));
+            currentDirection = dc * pulseFrequency / 100;
+        }
 
     }
 }
